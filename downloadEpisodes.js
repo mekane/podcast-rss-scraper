@@ -1,7 +1,10 @@
 #! /usr/bin/node
 
 const fs = require('fs');
+const path = require('path');
 const request = require('request');
+const nodeProcess = require('child_process');
+const execSync = nodeProcess.execSync;
 
 const downloadDir = 'downloads/';
 if (!fs.existsSync(downloadDir)){
@@ -23,11 +26,24 @@ const episodeList = require(jsonFile);
 //showAllEpisodeInformation(episodeList);
 //showTotalDownloadSize(episodeList);
 
-//episodeList.forEach(tryDownload);
-result = tryDownload(episodeList[1]);
-console.log(result ? 'OK' : 'Fail');
+const max = episodeList.length;
+//const max = 1;
+for ( let i = 0 ; i < max ; i++ ) {
+  result = tryDownload(episodeList[i]);
+
+  const randomTime = Math.floor(Math.random() * 5000);
+
+  if (result)
+    msleep(randomTime);
+  else
+    break;
+}
 
 /*========== Utilities ==========*/
+function msleep(n) {
+  console.log(`sleep ${n}`);
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, n);
+}
 
 function showAllEpisodeInformation(list) {
   list.forEach(e => console.log(showInfo(e)));
@@ -43,27 +59,43 @@ function showTotalDownloadSize(list) {
 function tryDownload(ep) {
   const url = getDownloadLink(ep);
   const filename = getFilename(ep);
-  const path = downloadDir + filename;
+  const filePath = path.normalize(downloadDir + filename);
 
-  if (fs.existsSync(path)) {
-    console.log(`Skipping ${path} - file exists`);
+  if (fs.existsSync(filePath)) {
+    console.log(`Skipping ${filePath} - file exists`);
     return true;
   }
- 
-  let success = true;
-  console.log(`Downloading ${url} to ${path}`);
 
+  //return downloadWithRequest(url, filePath);
+  return downloadWithWget(url, filePath); 
+}
+
+function downloadWithRequest(url, filePath) {
+  let result = true;
+  console.log(`Downloading ${url} to ${filePath}`);
   request
     .get(url)
     .on('error', function(err) {
       console.error('Error', err);
       success = false;
     })
-    .pipe(fs.createWriteStream(path));
+    .pipe(fs.createWriteStream(filePath));
 
-  return success;
+  return result;
 }
 
+function downloadWithWget(url, filePath) {
+  const wgetCommand = `wget ${url} -O "${filePath}"`;
+  console.log(wgetCommand);
+  try {
+    const processOut = execSync(wgetCommand, {stdio: 'inherit'});
+    return true;
+  }
+  catch (e) {
+    console.log(e);
+    return false;
+  }
+}
 
 function showInfo(ep) {
   const filename = getFilename(ep);
@@ -74,7 +106,9 @@ function showInfo(ep) {
 }
 
 function getFilename(episode) {
-  const title = episode.title;
+  const titleRaw = episode.title;
+  const title = titleRaw.replace(/[/\\?%*:|"<>]/g, '');
+	
   const pubDate = episode.pubDate;
 
   const jsDate = new Date(pubDate);
