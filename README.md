@@ -10,7 +10,9 @@ or being overrun with ads.
    * `npm init`
    * find the url of a podcast feed
    * `fetchAndParseRssFeedToJson.js > feed.json`
-   * `
+   * `downloadEpisodes.js feed.json`
+ 
+This will download the podcast feed and convert it to JSON, saving it in a file called feed.json, then loop over each episode entry and downloadit to a default directory called downloads.
 
 ## Notes
 
