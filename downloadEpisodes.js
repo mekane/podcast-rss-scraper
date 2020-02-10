@@ -6,7 +6,7 @@ const request = require('request');
 const nodeProcess = require('child_process');
 const execSync = nodeProcess.execSync;
 
-const downloadDir = 'downloads/';
+const downloadDir = './';
 if (!fs.existsSync(downloadDir)){
     fs.mkdirSync(downloadDir);
 }
@@ -19,7 +19,7 @@ if ( userArgs.length ) {
     jsonFile = userArgs[0]
 }
 else
-    console.log('using default json file')
+    console.log(`using default json file ${jsonFile}`)
 
 const episodeList = require(jsonFile);
 
@@ -27,16 +27,20 @@ const episodeList = require(jsonFile);
 //showTotalDownloadSize(episodeList);
 
 const max = episodeList.length;
-//const max = 1;
+let alreadyDownloaded = 0;
+
 for ( let i = 0 ; i < max ; i++ ) {
-  result = tryDownload(episodeList[i]);
+  let success = tryDownload(episodeList[i]);
 
   const randomTime = Math.floor(Math.random() * 5000);
 
-  if (result)
+  if (success)
     msleep(randomTime);
-  else
+
+  if(alreadyDownloaded > 3) {
+    console.log(`Found ${alreadyDownloaded} episodes already downloaded - aborting downloads`);
     break;
+  }
 }
 
 /*========== Utilities ==========*/
@@ -63,6 +67,7 @@ function tryDownload(ep) {
 
   if (fs.existsSync(filePath)) {
     console.log(`Skipping ${filePath} - file exists`);
+    alreadyDownloaded++;
     return true;
   }
 
